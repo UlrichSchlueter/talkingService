@@ -1,12 +1,18 @@
 package com.ulrichschlueter.talkingService;
 
 import io.dropwizard.Application;
+
+import io.dropwizard.bundles.assets.AssetsBundleConfiguration;
+import io.dropwizard.bundles.assets.ConfiguredAssetsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import jersey.repackaged.com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TaskListServiceApplication extends Application<TaskListServiceConfiguration>{
+import static jersey.repackaged.com.google.common.collect.ImmutableMap.builder;
+
+public class TaskListServiceApplication extends Application<TaskListServiceConfiguration> {
 
     final  static String SERVICENAME = "TalkingService";
     Logger log = LoggerFactory.getLogger(TaskListResource.class);
@@ -23,10 +29,9 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
     @Override
     public void initialize(Bootstrap<TaskListServiceConfiguration> bootstrap) {
         // nothing to do yet
-            //bootstrap.addBundle(new AssetsBundle("/assets/css", "/css", null, "css"));
-            //bootstrap.addBundle(new AssetsBundle("/assets/js", "/js", null, "js"));
-            //bootstrap.addBundle(new AssetsBundle("/assets/pages", "/", "index.html", "html"));
-            }
+        //bootstrap.addBundle(new ConfiguredAssetsBundle("/assets/", "/anything/"));
+        bootstrap.addBundle(new ConfiguredAssetsBundle()); //take the definitions from the config yaml file (assets/mappings)
+           }
 
     @Override
     public void run(TaskListServiceConfiguration configuration,

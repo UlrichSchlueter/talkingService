@@ -3,14 +3,23 @@ consulEnabled: y
 consulURL: http://localhost:8500
 
 server:
-  rootPath: /api/*
-  applicationContextPath: /
+  rootPath : /api/*
   applicationConnectors:
     - type: http
       port: 8080
   adminConnectors:
     - type: http
       port: 8081
+
+
+assets:
+  mappings:
+    /assets/index.html: /index.html
+    /assets/pages: /pages
+  #overrides:
+    # Override requests to /dashboard/${1} to instead look in
+    # ${working directory}/src/main/resources/assets/${1}
+    #/ : src/main/resources/assets/
 
 
 
