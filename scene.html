@@ -1,0 +1,60 @@
+<html>
+  <head>
+    <script src="seen.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/coffee-script/1.7.1/coffee-script.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+  </head>
+  <body>
+  
+    <canvas width="900" height="500" id="seen-canvas"></canvas>
+
+    <script type="text/coffeescript">
+
+  width  = 900
+  height = 500
+
+  # Create sphere shape with randomly colored surfaces
+  shape = seen.Shapes.sphere(3).scale(height * 0.4)
+  seen.Colors.randomSurfaces2(shape)
+
+  # Create scene and add shape to model
+  scene = new seen.Scene
+    model    : seen.Models.default().add(shape)
+    viewport : seen.Viewports.center(width, height)
+
+  # Create render context from canvas
+  context = seen.Context('seen-canvas', scene).render()
+
+
+  asdfasdf = this
+  asdfasdf.asdfasdf = 1
+  # Slowly rotate sphere
+  rotxMod = () ->
+    request = $.get '/health'
+    request.done (data) ->
+      asdfasdf.asdfasdf = if data.fakeHealth.healthy then 1e-4 else -1e-4
+    request.fail (jqXHR, textStatus, errorThrown) ->
+      asdfasdf.asdfasdf = -1e-4
+   # if asdfasdf.asdfasdf != 0
+    asdfasdf.asdfasdf
+    #else
+     # 1e-4
+
+
+  context.animate()
+    .onBefore((t, dt) -> shape.rotx(dt*rotxMod()).roty(0.7*dt*1e-4))
+    .start()
+
+  # Enable drag-to-rotate on the canvas
+  dragger = new seen.Drag('seen-canvas', {inertia : true})
+  dragger.on('drag.rotate', (e) ->
+    xform = seen.Quaternion.xyToTransform(e.offsetRelative...)
+    shape.transform(xform)
+    context.render()
+  )
+
+
+    </script>
+
+  </body>
+  </html>

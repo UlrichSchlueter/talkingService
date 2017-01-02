@@ -1,0 +1,16 @@
+maxLength: 100
+consulEnabled: y
+consulURL: http://localhost:8500
+
+server:
+  rootPath: /api/*
+  applicationContextPath: /
+  applicationConnectors:
+    - type: http
+      port: 8080
+  adminConnectors:
+    - type: http
+      port: 8081
+
+
+
