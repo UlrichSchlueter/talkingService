@@ -2,41 +2,114 @@ package com.ulrichschlueter.talkingService;
 
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Optional;
+import com.orbitz.consul.KeyValueClient;
+import com.orbitz.consul.model.health.ServiceHealth;
+import com.orbitz.consul.model.kv.Value;
+import com.ulrichschlueter.talkingService.strategy.BaseStrategy;
+import com.ulrichschlueter.talkingService.strategy.NextPick;
+import com.ulrichschlueter.talkingService.strategy.RandomStrategy;
+import com.ulrichschlueter.talkingService.strategy.Strategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
-import java.util.Random;
+import java.util.*;
 
 
 /**
  * Created by Uli on 03/01/2016.
  */
-@Path("/work")
+@Path("/work/{sender}")
 @Produces(MediaType.APPLICATION_JSON)
-public class ConsulTaskWorkerResource {
+public class ConsulTaskWorkerResource extends TimerTask{
     private final ConsulConnector consulConnector;
     Logger log = LoggerFactory.getLogger(ConsulTaskWorkerResource.class);
+    Timer timer = new Timer();
+    Random rnd = new Random();
+    Client jerseyClient=null;
+    private long amount=100;
+    private Strategy strategy=new RandomStrategy();
+    private int maxStrategy=2;
 
-    public ConsulTaskWorkerResource(String consulURL) {
-        this.log = log;
-        consulConnector=new ConsulConnector(consulURL);
+    public ConsulTaskWorkerResource(ConsulConnector consulConnector, Client jerseyClient) {
+        this.consulConnector =consulConnector;
+        this.jerseyClient=jerseyClient;
+        timer.schedule(this, 500, 5000);
+        //strategy=rnd.nextInt(maxStrategy);
     }
 
     @GET
     @Timed
-    public Long work(@QueryParam("contains") Optional<String> contains) {
+    public Long work(@PathParam("sender") String sender, @QueryParam("drop") Optional<Long> dropAmount) {
 
-        long res=0;
-        Random rn = new Random();
-        for (int i = 0; i < 10000000; i++) {
-            res = rn.nextLong();
+        long amountReceived= dropAmount.or(0L);
+        long amountToBeReturned=strategy.applyOfferHandling(sender,amountReceived,amount);
+
+        log.info(strategy +" > + "+ amountReceived +" - "+ amountToBeReturned+"> "+amount +" "+sender);
+        amount=amount+amountReceived-amountToBeReturned;
+        log.info(">> : "+amount);
+
+        addLong(consulConnector.getFullServiceName() +"/from/"+sender+"/amount",amountReceived);
+        addLong(consulConnector.getFullServiceName() +"/to/"+sender+"/amount",amountToBeReturned);
+        addLong(consulConnector.getFullServiceName() +"/from/"+sender+"/calls",1);
+
+
+        return amountToBeReturned;
+    }
+
+     private void addLong(String key, long addThis)
+     {
+         KeyValueClient kvClient = consulConnector.getConsul().keyValueClient();
+         Optional<String> val =kvClient.getValueAsString(key);
+         long currentValue=0;
+         if (val.isPresent())
+         {
+             try {
+                 String What=val.get();
+                 currentValue = Long.parseLong(What);
+             }
+             catch (Exception e)
+             {
+                 e.printStackTrace();
+             }
+         }
+         long newvalue=currentValue+addThis;
+         kvClient.putValue(key,String.valueOf(newvalue));
+     }
+
+    @Override
+    public void run() {
+
+        List<ServiceHealth> filteredList=consulConnector.removeSelf(consulConnector.getAllHealthyPeerServices());
+
+        log.info("Filtered " + filteredList.size() );
+        if (filteredList.size()>0) {
+            NextPick nextPick=strategy.applySelectionProcess(filteredList,amount);
+
+            log.info("would talk to" + nextPick.peer);
+            Long amountReceived = getAnswerToOffer(nextPick.peer, nextPick.nextOffer);
+            amount=amount-nextPick.nextOffer+amountReceived;
+            log.info(">> : "+amount);
+
         }
-        consulConnector.getConsul().keyValueClient().putValue("Test",new Long(res).toString());
-        return res;
+        else
+        {
+            log.info("no peer to talk to");
+        }
+    }
+
+    private Long getAnswerToOffer(ServiceHealth peer, long amountToOffer) {
+        peer.getService().getPort();
+        //WebTarget target=jerseyClient.target("localhost:"++"/api/work");
+        String sender=consulConnector.getFullServiceName();
+        Long amountReceived = jerseyClient.target("http://"+peer.getNode().getAddress()+":"+  peer.getService().getPort()+"/api/work/"+sender)
+                .queryParam("drop", String.valueOf(amountToOffer))
+                .request(MediaType.APPLICATION_JSON)
+                .get(Long.class);
+        log.info("Initiator:"+ amount+" - "+ amountToOffer +" +"+ amountReceived+" to " + peer.getService().getId());
+        return amountReceived;
     }
 }

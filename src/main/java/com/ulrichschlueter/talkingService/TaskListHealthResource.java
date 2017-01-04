@@ -17,7 +17,7 @@ import javax.ws.rs.core.MediaType;
 /**
  * Created by Ulrich Schlueter
  */
-@Path("/health/{newstate}")
+@Path("/health")
 @Produces(MediaType.APPLICATION_JSON)
 public class TaskListHealthResource {
 	
@@ -31,7 +31,14 @@ public class TaskListHealthResource {
     }
 
     @GET
+    @Path("/")
+    public Result getHealth() {
+        return healthStatus;
+    }
+
+    @GET
     @Timed
+    @Path("/{newstate}")
 	public Result setHealth(@PathParam("newstate") String newstate) {
     	
     	if (newstate.equals("SICK"))

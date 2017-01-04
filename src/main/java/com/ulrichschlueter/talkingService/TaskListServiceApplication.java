@@ -4,11 +4,14 @@ import io.dropwizard.Application;
 
 import io.dropwizard.bundles.assets.AssetsBundleConfiguration;
 import io.dropwizard.bundles.assets.ConfiguredAssetsBundle;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import jersey.repackaged.com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.client.Client;
 
 import static jersey.repackaged.com.google.common.collect.ImmutableMap.builder;
 
@@ -38,6 +41,11 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
                     Environment environment) {
 
         // register resource now
+
+        final Client client = new JerseyClientBuilder(environment).using(configuration.getJerseyClientConfiguration())
+                .build(getName());
+
+
         final TaskListResource resource = new TaskListResource(
                 configuration.getMaxLength()
         );
@@ -48,18 +56,22 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
         final TaskListHealthResource healthResource = new TaskListHealthResource(
         );
 
-        final ConsulTaskWorkerResource workerResource = new ConsulTaskWorkerResource(
-                configuration.getConsulURL()
-        );
+        final ConsulConnector consulConnector=new ConsulConnector(configuration.getConsulURL(),SERVICENAME);
+
+        final ConsulTaskWorkerResource workerResource = new ConsulTaskWorkerResource(consulConnector,client);
 
 
         environment.jersey().register(resource);
         environment.jersey().register(shutdownResource);
         environment.jersey().register(healthResource);
         environment.jersey().register(workerResource);
+        environment.healthChecks().register("fakeHealth", new TaskListHealthCheck(healthResource));
+
+
 
         if (configuration.isConsulEnabled()) {
-            final ConsulHealthReporter consulHealthReporter = new ConsulHealthReporter(configuration.getConsulURL(), 5000, healthResource, SERVICENAME, "1234");
+            final ConsulHealthReporter consulHealthReporter = new ConsulHealthReporter(consulConnector
+                    , 5000, healthResource);
 
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 @Override
@@ -67,8 +79,9 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
                     consulHealthReporter.deregister();
                 }
             });
+            RuntimeInfo runtimeInfo=new RuntimeInfo(consulHealthReporter);
+            environment.lifecycle().addServerLifecycleListener(runtimeInfo);
 
-            consulHealthReporter.registerAndStartTimer();
         }
         else
         {
@@ -77,7 +90,7 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
 
 
 
-        environment.healthChecks().register("fakeHealth", new TaskListHealthCheck(healthResource));
+
     }
 
 

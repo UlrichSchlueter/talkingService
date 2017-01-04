@@ -19,29 +19,27 @@ public class ConsulHealthReporter extends TimerTask {
     private long delay = 15000; // milliseconds
 
     private TaskListHealthResource healthResource;
-    private String serviceName;
-    String serviceID;
+    //private String serviceName;
+    private int applicationPort=0;
+    //String serviceID;
     Timer timer = new Timer();
-    Logger log = LoggerFactory.getLogger(TaskListResource.class);
+    Logger log = LoggerFactory.getLogger(ConsulHealthReporter.class);
 
-    public ConsulHealthReporter(String consulURL, long delay, TaskListHealthResource healthResource, String serviceName, String serviceID) {
+
+    public ConsulHealthReporter(ConsulConnector consulConnector, long delay, TaskListHealthResource healthResource) {
         this.delay = delay;
         this.healthResource = healthResource;
-        this.serviceID = serviceID;
-        this.serviceName = serviceName;
-
-        consulConnector=new ConsulConnector(consulURL);
-
-        ConsulResponse<List<ServiceHealth>> allServiceInstances = consulConnector.getConsul().healthClient().getAllServiceInstances(serviceName);
-        int size = allServiceInstances.getResponse().size();
-        this.serviceID = new Integer(size + 1).toString();
-
+        this.consulConnector=consulConnector;
     }
 
-    public void registerAndStartTimer() {
+    public void registerAndStartTimer(int applicationPort) {
         timer.schedule(this, delay, delay);
+        this.applicationPort=applicationPort;
+        String serviceName=consulConnector.getServiceName();
+        String serviceID=consulConnector.getServiceID();
+
         try {
-            consulConnector.getAgentClient().register(8080, 30L, serviceName, serviceID);
+            consulConnector.getAgentClient().register(applicationPort, 30L, serviceName, serviceID);
             consulConnector.getAgentClient().pass(serviceID, "First"); // check in with Consul, serviceId required only.  client will prepend "service:" for service level checks.
             log.info("Register" + serviceName + serviceID);
         } catch (NotRegisteredException e) {
@@ -52,6 +50,8 @@ public class ConsulHealthReporter extends TimerTask {
     }
 
     public void deregister() {
+        String serviceName=consulConnector.getServiceName();
+        String serviceID=consulConnector.getServiceID();
         consulConnector.getAgentClient().deregister(serviceID);
         timer.cancel();
         log.info("Deregister" + serviceName + serviceID);
@@ -61,7 +61,8 @@ public class ConsulHealthReporter extends TimerTask {
     // this method performs the task
     public void run() {
         log.debug("timer working" + healthResource.getHealthStatus());
-
+        String serviceName=consulConnector.getServiceName();
+        String serviceID=consulConnector.getServiceID();
         try {
             if (healthResource.isHealthy()) {
                 consulConnector.getAgentClient().pass(serviceID, healthResource.getHealthStatus().toString());

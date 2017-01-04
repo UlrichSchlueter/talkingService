@@ -2,14 +2,17 @@ maxLength: 100
 consulEnabled: y
 consulURL: http://localhost:8500
 
+logging:
+  level: INFO
+
 server:
   rootPath : /api/*
   applicationConnectors:
     - type: http
-      port: 8080
+      port: 0
   adminConnectors:
     - type: http
-      port: 8081
+      port: 0
 
 
 assets:
@@ -21,5 +24,11 @@ assets:
     # ${working directory}/src/main/resources/assets/${1}
     #/ : src/main/resources/assets/
 
-
+jerseyClient:
+  minThreads: 1
+  maxThreads: 128
+  workQueueSize: 8
+  gzipEnabled: true
+  gzipEnabledForRequests: true
+  chunkedEncodingEnabled: true
 

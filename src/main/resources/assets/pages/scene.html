@@ -1,60 +1,150 @@
 <html>
-  <head>
-    <script src="seen.min.js"></script>
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/coffee-script/1.7.1/coffee-script.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
-  </head>
-  <body>
-  
-    <canvas width="900" height="500" id="seen-canvas"></canvas>
+<head>
+    <title>My first three.js app</title>
+    <style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+</head>
+<body>
+<script src="three.min.js"></script>
+<script src="js/controls/OrbitControls.js"></script>
 
-    <script type="text/coffeescript">
-
-  width  = 900
-  height = 500
-
-  # Create sphere shape with randomly colored surfaces
-  shape = seen.Shapes.sphere(3).scale(height * 0.4)
-  seen.Colors.randomSurfaces2(shape)
-
-  # Create scene and add shape to model
-  scene = new seen.Scene
-    model    : seen.Models.default().add(shape)
-    viewport : seen.Viewports.center(width, height)
-
-  # Create render context from canvas
-  context = seen.Context('seen-canvas', scene).render()
+<script>
+        var mouse = new THREE.Vector2(), INTERSECTED;
+        var raycaster;
 
 
-  asdfasdf = this
-  asdfasdf.asdfasdf = 1
-  # Slowly rotate sphere
-  rotxMod = () ->
-    request = $.get '/health'
-    request.done (data) ->
-      asdfasdf.asdfasdf = if data.fakeHealth.healthy then 1e-4 else -1e-4
-    request.fail (jqXHR, textStatus, errorThrown) ->
-      asdfasdf.asdfasdf = -1e-4
-   # if asdfasdf.asdfasdf != 0
-    asdfasdf.asdfasdf
-    #else
-     # 1e-4
+		var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+        var renderer = new THREE.WebGLRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.body.appendChild( renderer.domElement );
 
 
-  context.animate()
-    .onBefore((t, dt) -> shape.rotx(dt*rotxMod()).roty(0.7*dt*1e-4))
-    .start()
 
-  # Enable drag-to-rotate on the canvas
-  dragger = new seen.Drag('seen-canvas', {inertia : true})
-  dragger.on('drag.rotate', (e) ->
-    xform = seen.Quaternion.xyToTransform(e.offsetRelative...)
-    shape.transform(xform)
-    context.render()
-  )
+		var numberOfCubes=3
+		var radiusOfCircle=2
+        for (var i = 0; i < numberOfCubes; i++) {
+            var geometry = new THREE.SphereGeometry( radiusOfCircle/10, 15, 15 );
+            var material =new THREE.MeshPhongMaterial( {
+					color: 0x156289,
+					emissive: 0x072534,
+					side: THREE.DoubleSide,
+					shading: THREE.FlatShading
+				} )
+            var cube = new THREE.Mesh( geometry, material );
+            var axis = new THREE.Vector3( 0, 0, 1 );
+            cube.rotateX(Math.PI *2 /numberOfCubes *i)
+            cube.translateOnAxis(axis.normalize(),radiusOfCircle)
+            cube.userdata="Text "+i
+
+            scene.add( cube );
+        }
+
+        var lights = [];
+			lights[ 0 ] = new THREE.PointLight( 0xffffff, 1, 0 );
+			lights[ 1 ] = new THREE.PointLight( 0xffffff, 1, 0 );
+			lights[ 2 ] = new THREE.PointLight( 0xffffff, 1, 0 );
+			lights[ 3 ] = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+
+			lights[ 0 ].position.set( 0, 200, 0 );
+			lights[ 1 ].position.set( 100, 200, 100 );
+			lights[ 2 ].position.set( - 100, - 200, - 100 );
+			lights[ 3 ].position.set( 0, 200, 0 );
+
+			scene.add( lights[ 0 ] );
+			scene.add( lights[ 1 ] );
+			scene.add( lights[ 2 ] );
+			scene.add( lights[ 3 ] );
 
 
-    </script>
+        camera.position.z = 5;
 
-  </body>
-  </html>
+        controls = new THREE.OrbitControls( camera, renderer.domElement );
+        //controls.addEventListener( 'change', render ); // add this only if there is no animation loop (requestAnimationFrame)
+		controls.enableDamping = true;
+		controls.dampingFactor = 0.25;
+		controls.enableZoom = true;
+
+		raycaster = new THREE.Raycaster();
+
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
+       function onDocumentMouseDown( event ) {
+				event.preventDefault();
+				mouse.set( ( event.clientX / window.innerWidth ) * 2 - 1, - ( event.clientY / window.innerHeight ) * 2 + 1 );
+				raycaster.setFromCamera( mouse, camera );
+				var intersects = raycaster.intersectObjects( scene.children );
+				if ( intersects.length > 0 ) {
+					var intersect = intersects[ 0 ];
+					var hitObject=intersect.object;
+
+					var canvas1 = document.createElement('canvas');
+                        var context1 = canvas1.getContext('2d');
+                        context1.font = "Bold 10px Arial";
+                        context1.fillStyle = "rgba(255,0,0,1)";
+                        context1.fillText('Hello, world!', 0, 60);
+
+                        // canvas contents will be used for a texture
+                        var texture1 = new THREE.Texture(canvas1)
+                        texture1.needsUpdate = true;
+
+                        var material1 = new THREE.MeshBasicMaterial({ map: texture1, side: THREE.DoubleSide });
+                        material1.transparent = true;
+
+                    var bbox = new THREE.Box3().setFromObject(hitObject);
+                    //hitObject.computeBoundingBox();
+					var mTextMesh = new THREE.Mesh(
+                            new THREE.PlaneGeometry(50, 10),
+                            material1
+                          );
+					mTextMesh.position.x =  bbox.max.x + 1
+				    mTextMesh.position.y =  bbox.max.y + 1
+				    mTextMesh.position.z =  bbox.max.z + 1
+                    hitObject.add(mTextMesh)
+                    hitObject.add(mTextMesh)
+
+
+					render();
+				}
+			}
+
+        function onDocumentMouseMove( event ) {
+				event.preventDefault();
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+			}
+
+		var render = function () {
+			requestAnimationFrame( render );
+
+			controls.update(); // required if controls.enableDamping = true, or if controls.autoRotate = true
+
+			raycaster.setFromCamera( mouse, camera );
+			var intersects = raycaster.intersectObjects( scene.children );
+			if ( intersects.length > 0 ) {
+				if ( INTERSECTED != intersects[ 0 ].object ) {
+					if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+					INTERSECTED = intersects[ 0 ].object;
+					INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+					INTERSECTED.material.emissive.setHex( 0xff0000 );
+				}
+			} else {
+				if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+				INTERSECTED = null;
+			}
+
+
+			renderer.render(scene, camera);
+		};
+
+
+
+		render();
+
+		</script>
+</body>
+</html>
