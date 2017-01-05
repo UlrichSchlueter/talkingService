@@ -105,7 +105,7 @@ public class ConsulTaskWorkerResource extends TimerTask{
         peer.getService().getPort();
         //WebTarget target=jerseyClient.target("localhost:"++"/api/work");
         String sender=consulConnector.getFullServiceName();
-        Long amountReceived = jerseyClient.target("http://"+peer.getNode().getAddress()+":"+  peer.getService().getPort()+"/api/work/"+sender)
+        Long amountReceived = jerseyClient.target("http://"+peer.getService().getAddress()+":"+  peer.getService().getPort()+"/api/work/"+sender)
                 .queryParam("drop", String.valueOf(amountToOffer))
                 .request(MediaType.APPLICATION_JSON)
                 .get(Long.class);
