@@ -1,15 +1,16 @@
 package com.ulrichschlueter.talkingService;
 
-import com.google.common.net.HostAndPort;
-import com.orbitz.consul.AgentClient;
-import com.orbitz.consul.Consul;
 import com.orbitz.consul.NotRegisteredException;
-import com.orbitz.consul.model.ConsulResponse;
-import com.orbitz.consul.model.health.ServiceHealth;
+import com.orbitz.consul.model.agent.ImmutableRegistration;
+import com.orbitz.consul.model.agent.Registration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Created by uli on 02.01.17.
@@ -38,8 +39,15 @@ public class ConsulHealthReporter extends TimerTask {
         String serviceName=consulConnector.getServiceName();
         String serviceID=consulConnector.getServiceID();
 
+        Registration registration = ImmutableRegistration.builder()
+                .check(Registration.RegCheck.ttl(30L))
+                .port(applicationPort)
+                .name(serviceName)
+                .id(serviceID)
+                .address(getIp())
+                .build();
         try {
-            consulConnector.getAgentClient().register(applicationPort, 30L, serviceName, serviceID);
+            consulConnector.getAgentClient().register(registration);
             consulConnector.getAgentClient().pass(serviceID, "First"); // check in with Consul, serviceId required only.  client will prepend "service:" for service level checks.
             log.info("Register" + serviceName + serviceID);
         } catch (NotRegisteredException e) {
@@ -50,8 +58,8 @@ public class ConsulHealthReporter extends TimerTask {
     }
 
     public void deregister() {
-        String serviceName=consulConnector.getServiceName();
-        String serviceID=consulConnector.getServiceID();
+        String serviceName = consulConnector.getServiceName();
+        String serviceID = consulConnector.getServiceID();
         consulConnector.getAgentClient().deregister(serviceID);
         timer.cancel();
         log.info("Deregister" + serviceName + serviceID);
@@ -61,8 +69,8 @@ public class ConsulHealthReporter extends TimerTask {
     // this method performs the task
     public void run() {
         log.debug("timer working" + healthResource.getHealthStatus());
-        String serviceName=consulConnector.getServiceName();
-        String serviceID=consulConnector.getServiceID();
+        String serviceName = consulConnector.getServiceName();
+        String serviceID = consulConnector.getServiceID();
         try {
             if (healthResource.isHealthy()) {
                 consulConnector.getAgentClient().pass(serviceID, healthResource.getHealthStatus().toString());
@@ -72,6 +80,28 @@ public class ConsulHealthReporter extends TimerTask {
         } catch (NotRegisteredException e) {
             e.printStackTrace();
         }
+    }
+
+    private String getIp() {
+        String ip = "127.0.0.1";
+        try {
+            Process p = Runtime.getRuntime().exec("hostname -i");
+
+            p.waitFor();
+
+            BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+            String line = reader.readLine();
+            if (line != null) {
+                ip = line;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return ip;
     }
 }
 
