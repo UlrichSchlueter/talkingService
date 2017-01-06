@@ -1,6 +1,7 @@
 maxLength: 100
 consulEnabled: y
-consulURL: http://localhost:8500
+consulURL: ${DW_CONSULURL:-http://localhost:8500"}
+
 
 logging:
   level: INFO
@@ -19,10 +20,6 @@ assets:
   mappings:
     /assets/index.html: /index.html
     /assets/pages: /pages
-  #overrides:
-    # Override requests to /dashboard/${1} to instead look in
-    # ${working directory}/src/main/resources/assets/${1}
-    #/ : src/main/resources/assets/
 
 jerseyClient:
   minThreads: 1
@@ -31,4 +28,10 @@ jerseyClient:
   gzipEnabled: true
   gzipEnabledForRequests: true
   chunkedEncodingEnabled: true
+
+couchbase:
+    bucket: newbucket
+    hosts:
+      - http://localhost:8091/pools
+    password: test
 

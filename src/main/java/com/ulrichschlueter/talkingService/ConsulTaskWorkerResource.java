@@ -5,10 +5,13 @@ import com.google.common.base.Optional;
 import com.orbitz.consul.KeyValueClient;
 import com.orbitz.consul.model.health.ServiceHealth;
 import com.orbitz.consul.model.kv.Value;
+import com.ulrichschlueter.talkingService.persistence.PartnerData;
+import com.ulrichschlueter.talkingService.persistence.PartnerDataAccessor;
 import com.ulrichschlueter.talkingService.strategy.BaseStrategy;
 import com.ulrichschlueter.talkingService.strategy.NextPick;
 import com.ulrichschlueter.talkingService.strategy.RandomStrategy;
 import com.ulrichschlueter.talkingService.strategy.Strategy;
+import io.smartmachine.couchbase.Accessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +37,9 @@ public class ConsulTaskWorkerResource extends TimerTask{
     private Strategy strategy=new RandomStrategy();
     private int maxStrategy=2;
 
+    @Accessor
+    private PartnerDataAccessor accessor;
+
     public ConsulTaskWorkerResource(ConsulConnector consulConnector, Client jerseyClient) {
         this.consulConnector =consulConnector;
         this.jerseyClient=jerseyClient;
@@ -56,12 +62,19 @@ public class ConsulTaskWorkerResource extends TimerTask{
         addLong(consulConnector.getFullServiceName() +"/to/"+sender+"/amount",amountToBeReturned);
         addLong(consulConnector.getFullServiceName() +"/from/"+sender+"/calls",1);
 
+        PartnerData p = new PartnerData("1");
+        p.setFrom(sender);
+        p.setTo(consulConnector.getFullServiceName());
+
+        accessor.create("1",p);
 
         return amountToBeReturned;
     }
 
      private void addLong(String key, long addThis)
      {
+
+
          KeyValueClient kvClient = consulConnector.getConsul().keyValueClient();
          Optional<String> val =kvClient.getValueAsString(key);
          long currentValue=0;

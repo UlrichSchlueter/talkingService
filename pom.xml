@@ -34,6 +34,14 @@
 			<version>0.9.2</version>
 		</dependency>
 
+		<dependency>
+			<groupId>io.smartmachine</groupId>
+			<artifactId>dropwizard-couchbase</artifactId>
+			<version>0.2.3</version>
+
+		</dependency>
+
+
 	</dependencies>
 
 
@@ -82,7 +90,7 @@
 				<artifactId>docker-maven-plugin</artifactId>
 				<version>0.4.13</version>
 				<configuration>
-					<imageName>tasklist-service</imageName>
+					<imageName>talkingservice</imageName>
 					<dockerDirectory>.</dockerDirectory>
 					<resources>
 						<resource>

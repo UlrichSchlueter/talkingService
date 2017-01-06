@@ -5,8 +5,12 @@ import io.dropwizard.Application;
 import io.dropwizard.bundles.assets.AssetsBundleConfiguration;
 import io.dropwizard.bundles.assets.ConfiguredAssetsBundle;
 import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
+import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.smartmachine.couchbase.CouchbaseBundle;
+import io.smartmachine.couchbase.CouchbaseClientFactory;
 import jersey.repackaged.com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,12 +21,20 @@ import static jersey.repackaged.com.google.common.collect.ImmutableMap.builder;
 
 public class TaskListServiceApplication extends Application<TaskListServiceConfiguration> {
 
-    final  static String SERVICENAME = "TalkingService";
+    final static String SERVICENAME = "TalkingService";
     Logger log = LoggerFactory.getLogger(TaskListResource.class);
 
     public static void main(String[] args) throws Exception {
         new TaskListServiceApplication().run(args);
     }
+
+    private final CouchbaseBundle<TaskListServiceConfiguration> couchbaseBundle = new CouchbaseBundle<TaskListServiceConfiguration>() {
+
+        @Override
+        public CouchbaseClientFactory getCouchbaseClientFactory(TaskListServiceConfiguration configuration) {
+            return configuration.getCouchbaseClientFactory();
+        }
+    };
 
     @Override
     public String getName() {
@@ -34,7 +46,17 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
         // nothing to do yet
         //bootstrap.addBundle(new ConfiguredAssetsBundle("/assets/", "/anything/"));
         bootstrap.addBundle(new ConfiguredAssetsBundle()); //take the definitions from the config yaml file (assets/mappings)
-           }
+
+        // Enable variable substitution with environment variables
+        bootstrap.setConfigurationSourceProvider(
+                new SubstitutingSourceProvider(
+                        bootstrap.getConfigurationSourceProvider(),
+                        new EnvironmentVariableSubstitutor())
+        );
+
+        bootstrap.addBundle(couchbaseBundle);
+    }
+
 
     @Override
     public void run(TaskListServiceConfiguration configuration,
@@ -56,9 +78,11 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
         final TaskListHealthResource healthResource = new TaskListHealthResource(
         );
 
-        final ConsulConnector consulConnector=new ConsulConnector(configuration.getConsulURL(),SERVICENAME);
+        final ConsulConnector consulConnector = new ConsulConnector(configuration.getConsulURL(), SERVICENAME);
 
-        final ConsulTaskWorkerResource workerResource = new ConsulTaskWorkerResource(consulConnector,client);
+        final ConsulTaskWorkerResource workerResource = new ConsulTaskWorkerResource(consulConnector, client);
+
+
 
 
         environment.jersey().register(resource);
@@ -66,7 +90,6 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
         environment.jersey().register(healthResource);
         environment.jersey().register(workerResource);
         environment.healthChecks().register("fakeHealth", new TaskListHealthCheck(healthResource));
-
 
 
         if (configuration.isConsulEnabled()) {
@@ -79,20 +102,15 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
                     consulHealthReporter.deregister();
                 }
             });
-            RuntimeInfo runtimeInfo=new RuntimeInfo(consulHealthReporter);
+            RuntimeInfo runtimeInfo = new RuntimeInfo(consulHealthReporter);
             environment.lifecycle().addServerLifecycleListener(runtimeInfo);
 
-        }
-        else
-        {
+        } else {
             log.info("Consul Integration Disabled");
         }
 
 
-
-
     }
-
 
 
 }

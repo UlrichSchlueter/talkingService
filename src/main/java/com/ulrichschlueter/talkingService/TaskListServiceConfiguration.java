@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.bundles.assets.AssetsBundleConfiguration;
 import io.dropwizard.bundles.assets.AssetsConfiguration;
 import io.dropwizard.client.JerseyClientConfiguration;
+import io.smartmachine.couchbase.CouchbaseClientFactory;
 import org.hibernate.validator.constraints.NotEmpty;
+import io.smartmachine.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -71,4 +73,19 @@ public class TaskListServiceConfiguration extends Configuration implements Asset
     public void setJerseyClientConfiguration(JerseyClientConfiguration jcc) {
         this.jerseyClient = jcc;
     }
+
+    @Valid
+    @NotNull
+    private CouchbaseClientFactory ccf = new CouchbaseClientFactory();
+
+    @JsonProperty("couchbase")
+    public CouchbaseClientFactory getCouchbaseClientFactory() {
+        return ccf;
+    }
+
+    @JsonProperty("couchbase")
+    public void setCouchbaseClientFactory(CouchbaseClientFactory ccf) {
+        this.ccf = ccf;
+    }
+
 }
