@@ -2,6 +2,10 @@ maxLength: 100
 consulEnabled: y
 consulURL: ${DW_CONSULURL:-http://localhost:8500"}
 
+couchbasebucket: newbucket
+couchbasebucketpassword: test
+couchbasehosts: http://localhost:8091
+
 
 logging:
   level: INFO
@@ -10,7 +14,7 @@ server:
   rootPath : /api/*
   applicationConnectors:
     - type: http
-      port: 0
+      port: 8080
   adminConnectors:
     - type: http
       port: 0
@@ -29,9 +33,6 @@ jerseyClient:
   gzipEnabledForRequests: true
   chunkedEncodingEnabled: true
 
-couchbase:
-    bucket: newbucket
-    hosts:
-      - http://localhost:8091/pools
-    password: test
+
+
 

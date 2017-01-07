@@ -5,9 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.bundles.assets.AssetsBundleConfiguration;
 import io.dropwizard.bundles.assets.AssetsConfiguration;
 import io.dropwizard.client.JerseyClientConfiguration;
-import io.smartmachine.couchbase.CouchbaseClientFactory;
-import org.hibernate.validator.constraints.NotEmpty;
-import io.smartmachine.*;
+
+
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -17,6 +16,39 @@ public class TaskListServiceConfiguration extends Configuration implements Asset
     private int maxLength;
     private String consulURL;
     private boolean consulEnabled;
+    private String couchbasebucket;
+    private String couchbasebucketpassword;
+    private String couchbasehosts;
+
+    @JsonProperty
+    public String getCouchbasebucket() {
+        return couchbasebucket;
+    }
+
+    @JsonProperty
+    public void setCouchbasebucket(String couchbasebucket) {
+        this.couchbasebucket = couchbasebucket;
+    }
+
+    @JsonProperty
+    public String getCouchbasebucketpassword() {
+        return couchbasebucketpassword;
+    }
+
+    @JsonProperty
+    public void setCouchbasebucketpassword(String couchbasebucketpassword) {
+        this.couchbasebucketpassword = couchbasebucketpassword;
+    }
+
+    @JsonProperty
+    public String getCouchbasehosts() {
+        return couchbasehosts;
+    }
+
+    @JsonProperty
+    public void setCouchbasehosts(String couchbasehosts) {
+        this.couchbasehosts = couchbasehosts;
+    }
 
     @Valid
     @NotNull
@@ -74,18 +106,6 @@ public class TaskListServiceConfiguration extends Configuration implements Asset
         this.jerseyClient = jcc;
     }
 
-    @Valid
-    @NotNull
-    private CouchbaseClientFactory ccf = new CouchbaseClientFactory();
 
-    @JsonProperty("couchbase")
-    public CouchbaseClientFactory getCouchbaseClientFactory() {
-        return ccf;
-    }
-
-    @JsonProperty("couchbase")
-    public void setCouchbaseClientFactory(CouchbaseClientFactory ccf) {
-        this.ccf = ccf;
-    }
 
 }

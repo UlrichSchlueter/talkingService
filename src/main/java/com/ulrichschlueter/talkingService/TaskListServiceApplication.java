@@ -1,17 +1,14 @@
 package com.ulrichschlueter.talkingService;
 
+import com.ulrichschlueter.talkingService.Couchbase.CouchbaseConfig;
 import io.dropwizard.Application;
 
-import io.dropwizard.bundles.assets.AssetsBundleConfiguration;
 import io.dropwizard.bundles.assets.ConfiguredAssetsBundle;
 import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import io.smartmachine.couchbase.CouchbaseBundle;
-import io.smartmachine.couchbase.CouchbaseClientFactory;
-import jersey.repackaged.com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,13 +25,7 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
         new TaskListServiceApplication().run(args);
     }
 
-    private final CouchbaseBundle<TaskListServiceConfiguration> couchbaseBundle = new CouchbaseBundle<TaskListServiceConfiguration>() {
 
-        @Override
-        public CouchbaseClientFactory getCouchbaseClientFactory(TaskListServiceConfiguration configuration) {
-            return configuration.getCouchbaseClientFactory();
-        }
-    };
 
     @Override
     public String getName() {
@@ -54,7 +45,7 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
                         new EnvironmentVariableSubstitutor())
         );
 
-        bootstrap.addBundle(couchbaseBundle);
+
     }
 
 
@@ -82,7 +73,9 @@ public class TaskListServiceApplication extends Application<TaskListServiceConfi
 
         final ConsulTaskWorkerResource workerResource = new ConsulTaskWorkerResource(consulConnector, client);
 
-
+        CouchbaseConfig.bucketName=configuration.getCouchbasebucket();
+        CouchbaseConfig.bucketPassword=configuration.getCouchbasebucketpassword();
+        CouchbaseConfig.couchbasehosts=configuration.getCouchbasehosts();
 
 
         environment.jersey().register(resource);

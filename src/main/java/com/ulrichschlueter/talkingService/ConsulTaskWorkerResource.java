@@ -1,25 +1,27 @@
 package com.ulrichschlueter.talkingService;
 
 import com.codahale.metrics.annotation.Timed;
+import com.couchbase.client.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.java.Bucket;
+import com.couchbase.client.java.document.JsonDocument;
+import com.couchbase.client.java.document.JsonLongDocument;
+import com.couchbase.client.java.document.json.JsonObject;
 import com.google.common.base.Optional;
 import com.orbitz.consul.KeyValueClient;
 import com.orbitz.consul.model.health.ServiceHealth;
-import com.orbitz.consul.model.kv.Value;
+import com.ulrichschlueter.talkingService.Couchbase.ConnectionFactory;
 import com.ulrichschlueter.talkingService.persistence.PartnerData;
-import com.ulrichschlueter.talkingService.persistence.PartnerDataAccessor;
-import com.ulrichschlueter.talkingService.strategy.BaseStrategy;
 import com.ulrichschlueter.talkingService.strategy.NextPick;
 import com.ulrichschlueter.talkingService.strategy.RandomStrategy;
 import com.ulrichschlueter.talkingService.strategy.Strategy;
-import io.smartmachine.couchbase.Accessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.client.Client;
-import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import java.util.*;
+
 
 
 /**
@@ -37,8 +39,7 @@ public class ConsulTaskWorkerResource extends TimerTask{
     private Strategy strategy=new RandomStrategy();
     private int maxStrategy=2;
 
-    @Accessor
-    private PartnerDataAccessor accessor;
+
 
     public ConsulTaskWorkerResource(ConsulConnector consulConnector, Client jerseyClient) {
         this.consulConnector =consulConnector;
@@ -62,11 +63,41 @@ public class ConsulTaskWorkerResource extends TimerTask{
         addLong(consulConnector.getFullServiceName() +"/to/"+sender+"/amount",amountToBeReturned);
         addLong(consulConnector.getFullServiceName() +"/from/"+sender+"/calls",1);
 
-        PartnerData p = new PartnerData("1");
+        //couchbase part
+        String prefix = "Talker::"+consulConnector.getFullServiceName()+"::";
+
+
+        // and / or
+        Bucket bucket= ConnectionFactory.getBucketConnection();
+        JsonLongDocument counter = bucket.counter("SenderReceiver", 1, 0); //gives 12345
+        String id = prefix + counter.content().toString();
+
+        PartnerData p = new PartnerData(id);
         p.setFrom(sender);
         p.setTo(consulConnector.getFullServiceName());
+        p.setAmountGiven(amountReceived);
 
-        accessor.create("1",p);
+        ObjectMapper mapper=new ObjectMapper();
+        try {
+            JsonObject doc= JsonObject.fromJson(mapper.writeValueAsString(p));
+            bucket.insert(JsonDocument.create(p.getSerial(),doc));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        String x= bucket.get(p.getSerial()).content().toString();
+
+        PartnerData value = null;
+        try {
+            value = mapper.readValue(x, PartnerData.class);
+            value.setSerial(p.getSerial());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+
 
         return amountToBeReturned;
     }
